@@ -1,7 +1,17 @@
-import _thread
+"""
+快捷部署模块，用于应对以下两种情况：
+
+其一，需要批量解压服务器(patch)。该脚本可以将你zip批量解压到有序的文件夹中，
+入你可以将weisheng.zip解压成weisheng0-99文件夹中。同时会将config/文件夹
+同样也批量覆盖进去，从而实现如端口的变更。
+
+其二，需要批量拷贝的情况(copy)，该脚本可以将源文件夹批量拷贝成有序的文件夹，
+以便覆盖操作。
+
+你可以使用 python server-patch.py 来直接查看用法，无需解读代码。
+"""
 import os
 import sys
-import threading
 import time
 import zipfile
 import shutil

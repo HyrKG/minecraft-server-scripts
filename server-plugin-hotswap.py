@@ -1,3 +1,12 @@
+"""
+该模块可以在服务器启动前执行，
+其将从Mysql中读取一条路径，用于当作源文件夹，
+并通过与当前路径地plugins文件夹进行MD5匹配，
+若MD5不匹配，则将源文件夹中不匹配文件更新过来。
+
+你可以使用 ython server-plugin-hotswap.py 来直接查看用法，无需解读代码。
+"""
+
 import os.path
 import sys
 import time
