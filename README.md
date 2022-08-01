@@ -4,4 +4,4 @@ server-patch 服务器批量部署脚本，可用于批量复制文件夹、批�
 
 server-plugin-hotswap 基于Mysql的插件热更新功能
 
-server-console 服务器控制台，Screen的替代方案，便于批量部署与运维
+server-console 服务器控制台，Screen的替代方案，便于批量部署与运维（尚在开发中）
