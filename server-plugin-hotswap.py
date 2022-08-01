@@ -1,10 +1,28 @@
-"""
+r"""
 该模块可以在服务器启动前执行，
 其将从Mysql中读取一条路径，用于当作源文件夹，
-并通过与当前路径地plugins文件夹进行MD5匹配，
+并通过与当前路径的plugins/中插件进行MD5匹配，
 若MD5不匹配，则将源文件夹中不匹配文件更新过来。
 
-你可以使用 ython server-plugin-hotswap.py 来直接查看用法，无需解读代码。
+-----------------------------------------------------------
+
+使用该功能你需要遵守的规则：
+一、插件匹配规则，如Abcd-123.jar与Abcd-321.jar会被认为是同一个插件，只看'-'前边的名字，如果没有'-'，则看全部。
+二、插件将以MD5进行匹配，请时刻保证源文件夹中的插件为最新版本。
+
+注意，你需要提前准备好数据库以使用该脚本：
+数据库表格式：
+{
+    config TINYTEXT,
+    value TINYTEXT
+}
+数据库配置：
+{
+    config = plugin_hotswap_path,
+    value = 你的路径(如D:\hotswap_plugins)
+}
+
+你可以使用 python server-plugin-hotswap.py 来直接查看用法，无需解读代码。
 """
 
 import os.path
@@ -125,20 +143,20 @@ def mysql_select_hotswap_path(raw_host, usr, pwd, database, table):
 
 
 if __name__ == '__main__':
-    if len(sys.argv) < 4:
+    if len(sys.argv) < 6:
         info("参数有误!")
-        info(fr"usage: {os.path.basename(__file__)} <数据库连接> <账号> <密码>")
+        info(fr"usage: {os.path.basename(__file__)} <host> <database> <table> <账号> <密码> - 注意，数据库需提前创建并配置。")
     else:
         info("即将进行热更新,正在准备数据中...")
         timeBefore = time.time()
 
         mysql_host = sys.argv[1]
-        mysql_usr = sys.argv[2]
-        mysql_pwd = sys.argv[3]
+        mysql_usr = sys.argv[4]
+        mysql_pwd = sys.argv[5]
         if mysql_pwd == '@':
             mysql_pwd = ''
-        mysql_database = 'liuweipladugin'
-        mysql_table = 'global_config'
+        mysql_database = sys.argv[2]
+        mysql_table = sys.argv[3]
 
         '''从数据库读取文件'''
         info("##########################################################################")
