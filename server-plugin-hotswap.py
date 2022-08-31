@@ -44,9 +44,10 @@ def info(msg):
 def infoWithoutEnd(msg):
     print("server-plugin-hotswap>", msg, Fore.RESET, end="")
 
+def check_file_type(file_name):
+    return file_name.endswith(".jar") or file_name.endswith(".yml") or file_name.endswith(".json")
 
 # read md5 from file
-
 def md5_file(filePath):
     md5 = None
     with open(filePath, 'rb') as fp:
@@ -56,7 +57,7 @@ def md5_file(filePath):
 
 
 def get_plugin_name(full_name):
-    return re.split('[-|_]', full_name[0:len(full_name) - 4])[0]
+    return re.split('[-|_]', full_name[0:full_name.rindex(".")])[0]
 
 
 def update_file_from_dir(source_dir, target_dir, source_to_target_dict):
@@ -93,7 +94,7 @@ def compare_and_copy_file(source_dir, target_dir):
         if os.path.isdir(source_file):
             compare_and_copy_file(os.path.join(source_dir, source_file), os.path.join(target_dir, source_file))
             # info(Fore.YELLOW + fr"-------------------------------------{source_file}-------------------------------------" + Fore.RESET)
-        elif source_file.endswith(".jar"):
+        elif check_file_type(source_file):
             pluginName = get_plugin_name(source_file)
             pluginMd5 = md5_file(os.path.join(source_dir, source_file))
             valid_source_plugins_dict[pluginName] = pluginMd5
@@ -103,7 +104,7 @@ def compare_and_copy_file(source_dir, target_dir):
     # info(Fore.GREEN + fr"@正在比对目标插件中... [{target_dir}] " + Fore.RESET)
     for target_file in os.listdir(target_dir):
         if not os.path.isdir(target_file):
-            if target_file.endswith(".jar"):
+            if check_file_type(target_file):
                 pluginName = get_plugin_name(target_file)
                 if pluginName not in valid_source_plugins_dict:
                     continue
@@ -119,11 +120,11 @@ def compare_and_copy_file(source_dir, target_dir):
                         result = "即将进行更新。。。"
                         need_to_hotswap_plugins[target_file] = origin_source_plugins_map[pluginName]
 
-                    info(Fore.GREEN + fr"@--比对 {target_file}> {pluginName}:{pluginMd5} 结果> {result}")
+                    info(Fore.GREEN + fr"@--比对 {target_file}> {pluginName} of {pluginMd5} 结果> {result}")
 
     for key in valid_source_plugins_dict.keys():
         if key not in checked_plugin:
-            info(Fore.GREEN + fr"@--未找到插件 {origin_source_plugins_map[key]}，即将复制更新。。。")
+            info(Fore.GREEN + fr"@--未找到文件 {origin_source_plugins_map[key]}，即将复制更新。。。")
             need_to_hotswap_plugins[origin_source_plugins_map[key]] = origin_source_plugins_map[key]
 
     # info("##########################################################################")
@@ -192,7 +193,7 @@ if __name__ == '__main__':
         for path in paths:
             if not os.path.exists(path):
                 os.mkdir(path)
-                info(Fore.BLUE +fr"目录【{path}】不存在，已创建！")
+                info(Fore.BLUE + fr"目录【{path}】不存在，已创建！")
 
         '''比对并复制'''
         info(Fore.CYAN + "##########################################################################")
