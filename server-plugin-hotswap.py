@@ -31,16 +31,18 @@ import sys
 import time
 import hashlib
 import shutil
+import re
+from colorama import Fore
 
 import mysql.connector as sql
 
 
 def info(msg):
-    print("server-plugin-hotswap>", msg)
+    print("server-plugin-hotswap>", msg, Fore.RESET)
 
 
 def infoWithoutEnd(msg):
-    print("server-plugin-hotswap>", msg, end="")
+    print("server-plugin-hotswap>", msg, Fore.RESET, end="")
 
 
 # read md5 from file
@@ -54,7 +56,7 @@ def md5_file(filePath):
 
 
 def get_plugin_name(full_name):
-    return full_name[0:len(full_name) - 4].replace(" ", "").split("-")[0]
+    return re.split('[-|_]', full_name[0:len(full_name) - 4])[0]
 
 
 def update_file_from_dir(source_dir, target_dir, source_to_target_dict):
@@ -62,16 +64,22 @@ def update_file_from_dir(source_dir, target_dir, source_to_target_dict):
         timeBefore = time.time()
         value = source_to_target_dict[key]
         if os.path.exists(os.path.join(target_dir, key)):
-            infoWithoutEnd(fr"--替换 {key} 为 {value} 中...")
+            infoWithoutEnd(Fore.RED + fr"[!] --替换 {key} 为 {value} 中...")
             os.remove(os.path.join(target_dir, key))
         else:
-            infoWithoutEnd(fr"--复制新增 {key} 中...")
+            infoWithoutEnd(Fore.RED + fr"[!] --复制新增 {key} 中...")
         timeCost = (time.time() - timeBefore)
         print(fr"{timeCost}s!")
         shutil.copy(os.path.join(source_dir, value), os.path.join(target_dir, value))
 
 
 def compare_and_copy_file(source_dir, target_dir):
+    '''
+    比较两个目录，并且复制需要更新的类型
+
+    :param source_dir: 源文件夹
+    :param target_dir: 目标文件夹
+    '''
     origin_source_plugins_map = {}
     valid_source_plugins_dict = {}
 
@@ -79,20 +87,20 @@ def compare_and_copy_file(source_dir, target_dir):
 
     checked_plugin = []
 
-    info(fr"正在汇总源插件中... [{source_dir}] ")
+    # info(fr"正在汇总源插件中... [{source_dir}] ")
     for source_file in os.listdir(source_dir):
         # 如果是文件夹，跳转进入复制
         if os.path.isdir(source_file):
-            info(fr"跳过目录{source_file}")
-            # compare_and_copy_file(os.path.join(source_dir, source_file), os.path.join(target_dir, source_file))
+            compare_and_copy_file(os.path.join(source_dir, source_file), os.path.join(target_dir, source_file))
+            # info(Fore.YELLOW + fr"-------------------------------------{source_file}-------------------------------------" + Fore.RESET)
         elif source_file.endswith(".jar"):
             pluginName = get_plugin_name(source_file)
             pluginMd5 = md5_file(os.path.join(source_dir, source_file))
             valid_source_plugins_dict[pluginName] = pluginMd5
             origin_source_plugins_map[pluginName] = source_file
-            info(fr"--{source_file}> {pluginName}:{pluginMd5}")
+            # info(fr"*--{source_file}> {pluginName}:{pluginMd5}")
 
-    info(fr"正在比对目标插件中... [{target_dir}] ")
+    # info(Fore.GREEN + fr"@正在比对目标插件中... [{target_dir}] " + Fore.RESET)
     for target_file in os.listdir(target_dir):
         if not os.path.isdir(target_file):
             if target_file.endswith(".jar"):
@@ -111,15 +119,15 @@ def compare_and_copy_file(source_dir, target_dir):
                         result = "即将进行更新。。。"
                         need_to_hotswap_plugins[target_file] = origin_source_plugins_map[pluginName]
 
-                    info(fr"--比对 {target_file}> {pluginName}:{pluginMd5} 结果> {result}")
+                    info(Fore.GREEN + fr"@--比对 {target_file}> {pluginName}:{pluginMd5} 结果> {result}")
 
     for key in valid_source_plugins_dict.keys():
         if key not in checked_plugin:
-            info(fr"--未找到插件 {origin_source_plugins_map[key]}，即将复制更新。。。")
+            info(Fore.GREEN + fr"@--未找到插件 {origin_source_plugins_map[key]}，即将复制更新。。。")
             need_to_hotswap_plugins[origin_source_plugins_map[key]] = origin_source_plugins_map[key]
 
-    info("##########################################################################")
-    info(fr"需要处理的文件数量 {len(need_to_hotswap_plugins)}")
+    # info("##########################################################################")
+    info(Fore.YELLOW + fr"@[{target_dir}] 需要处理的文件数量 {len(need_to_hotswap_plugins)}")
     if len(need_to_hotswap_plugins) > 0:
         update_file_from_dir(source_dir, target_dir, need_to_hotswap_plugins)
 
@@ -144,13 +152,15 @@ def mysql_select_hotswap_path(raw_host, usr, pwd, database, table):
 
 
 if __name__ == '__main__':
+    # 检测参数长度是否合适,如果合适才进行下一步
     if len(sys.argv) < 6:
-        info("参数有误!")
+        info(Fore.BLUE + "参数有误!")
         info(fr"usage: {os.path.basename(__file__)} <host> <database> <table> <账号> <密码> - 注意，数据库需提前创建并配置。")
     else:
-        info("即将进行热更新,正在准备数据中...")
+        info(Fore.BLUE + "即将进行热更新,正在准备数据中...")
         timeBefore = time.time()
 
+        # 加载初始数据
         mysql_host = sys.argv[1]
         mysql_usr = sys.argv[4]
         mysql_pwd = sys.argv[5]
@@ -159,34 +169,36 @@ if __name__ == '__main__':
         mysql_database = sys.argv[2]
         mysql_table = sys.argv[3]
 
+        # 从数据库读取路径
         '''从数据库读取文件'''
-        info("##########################################################################")
-        infoWithoutEnd("正在与数据库连接并读取路径...")
+        info(Fore.CYAN + "##########################################################################")
+        infoWithoutEnd(Fore.BLUE + "正在与数据库连接并读取路径...")
 
-        # 热更新目录，源目录
-        hotswap_path = mysql_select_hotswap_path(mysql_host, mysql_usr, mysql_pwd, mysql_database, mysql_table)
+        # 热更新目录，源目录，
+        hotswap_source_path = mysql_select_hotswap_path(mysql_host, mysql_usr, mysql_pwd, mysql_database, mysql_table)
 
-        if hotswap_path is None:
-            hotswap_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "hotswap_plugins")
-            info(f"转为使用默认路径{hotswap_path}")
+        if hotswap_source_path is None:
+            hotswap_source_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "hotswap_dir")
+            info(Fore.BLUE + f"转为使用默认路径{hotswap_source_path}")
         else:
-            print(fr"{hotswap_path}")
+            print(fr"{hotswap_source_path}")
 
         # 目标目录
-        plugin_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "plugins")
+        # target_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "plugins")
+        target_path = os.path.dirname(os.path.abspath(__file__))
 
-        paths = [hotswap_path, plugin_path]
+        paths = [hotswap_source_path, target_path]
         # 检测并创建目录
         for path in paths:
             if not os.path.exists(path):
                 os.mkdir(path)
-                info(fr"目录【{path}】不存在，已创建！")
+                info(Fore.BLUE +fr"目录【{path}】不存在，已创建！")
 
         '''比对并复制'''
-        info("##########################################################################")
-        info(fr"正在进行热更新检查中 源》{hotswap_path} 目标》{plugin_path}")
-        compare_and_copy_file(hotswap_path, plugin_path)
-        info("##########################################################################")
+        info(Fore.CYAN + "##########################################################################")
+        info(Fore.BLUE + fr"正在进行热更新检查中 源》{hotswap_source_path} 目标》{target_path}")
+        compare_and_copy_file(hotswap_source_path, target_path)
+        info(Fore.CYAN + "##########################################################################")
 
         timeCost = (time.time() - timeBefore)
-        info(fr"热更新结束,耗时 {timeCost} 秒")
+        info(Fore.BLUE + fr"热更新结束,耗时 {timeCost} 秒")
