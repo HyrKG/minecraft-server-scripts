@@ -44,8 +44,11 @@ def info(msg):
 def infoWithoutEnd(msg):
     print("server-plugin-hotswap>", msg, Fore.RESET, end="")
 
+
 def check_file_type(file_name):
-    return file_name.endswith(".jar") or file_name.endswith(".yml") or file_name.endswith(".json")
+    return file_name.endswith(".jar") or file_name.endswith(".yml") or file_name.endswith(
+        ".json") or file_name.endswith(".lang")
+
 
 # read md5 from file
 def md5_file(filePath):
@@ -88,10 +91,9 @@ def compare_and_copy_file(source_dir, target_dir):
 
     checked_plugin = []
 
-    # info(fr"正在汇总源插件中... [{source_dir}] ")
     for source_file in os.listdir(source_dir):
         # 如果是文件夹，跳转进入复制
-        if os.path.isdir(source_file):
+        if os.path.isdir(os.path.join(source_dir, source_file)):
             compare_and_copy_file(os.path.join(source_dir, source_file), os.path.join(target_dir, source_file))
             # info(Fore.YELLOW + fr"-------------------------------------{source_file}-------------------------------------" + Fore.RESET)
         elif check_file_type(source_file):
@@ -101,9 +103,12 @@ def compare_and_copy_file(source_dir, target_dir):
             origin_source_plugins_map[pluginName] = source_file
             # info(fr"*--{source_file}> {pluginName}:{pluginMd5}")
 
+    if len(valid_source_plugins_dict) == 0:
+        return
+
     # info(Fore.GREEN + fr"@正在比对目标插件中... [{target_dir}] " + Fore.RESET)
     for target_file in os.listdir(target_dir):
-        if not os.path.isdir(target_file):
+        if not os.path.isdir(os.path.join(target_dir, target_file)):
             if check_file_type(target_file):
                 pluginName = get_plugin_name(target_file)
                 if pluginName not in valid_source_plugins_dict:
