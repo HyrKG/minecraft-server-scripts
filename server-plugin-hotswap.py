@@ -143,7 +143,7 @@ def mysql_select_hotswap_path(raw_host, usr, pwd, database, table):
             database=database
         )
         cursor = mysqldb.cursor()
-        cursor.execute(fr"select value from {table} where config='plugin_hotswap_path' limit 1;")
+        cursor.execute(fr"select value from {table} where config='plugin_hotswap_dir' limit 1;")
         result = cursor.next()
         if len(result) > 0:
             resultPath = result[0]
