@@ -26,15 +26,15 @@ r"""
 你可以使用 python server-plugin-hotswap.py 来直接查看用法，无需解读代码。
 """
 
+import hashlib
 import os.path
+import re
+import shutil
 import sys
 import time
-import hashlib
-import shutil
-import re
-from colorama import Fore
 
 import mysql.connector as sql
+from colorama import Fore
 
 
 def info(msg):
@@ -138,7 +138,7 @@ def compare_and_copy_file(source_dir, target_dir):
         update_file_from_dir(source_dir, target_dir, need_to_hotswap_plugins)
 
 
-def mysql_select_hotswap_path(raw_host, usr, pwd, database, table):
+def mysql_select_hotswap_path(raw_host, usr, pwd, database, table, config):
     resultPath = None
     try:
         mysqldb = sql.connect(
@@ -148,7 +148,7 @@ def mysql_select_hotswap_path(raw_host, usr, pwd, database, table):
             database=database
         )
         cursor = mysqldb.cursor()
-        cursor.execute(fr"select value from {table} where config='plugin_hotswap_dir' limit 1;")
+        cursor.execute(fr"select value from {table} where config='{config}' limit 1;")
         result = cursor.next()
         if len(result) > 0:
             resultPath = result[0]
@@ -161,7 +161,7 @@ if __name__ == '__main__':
     # 检测参数长度是否合适,如果合适才进行下一步
     if len(sys.argv) < 6:
         info(Fore.BLUE + "参数有误!")
-        info(fr"usage: {os.path.basename(__file__)} <host> <database> <table> <账号> <密码> - 注意，数据库需提前创建并配置。")
+        info(fr"usage: {os.path.basename(__file__)} <host> <database> <table> <账号> <密码> [key] - 注意，数据库需提前创建并配置。")
     else:
         info(Fore.BLUE + "即将进行热更新,正在准备数据中...")
         timeBefore = time.time()
@@ -175,13 +175,18 @@ if __name__ == '__main__':
         mysql_database = sys.argv[2]
         mysql_table = sys.argv[3]
 
+        mysql_config = "plugin_hotswap_dir"
+        if len(sys.argv) >= 7:
+            mysql_config = sys.argv[6]
+
         # 从数据库读取路径
         '''从数据库读取文件'''
         info(Fore.CYAN + "##########################################################################")
         infoWithoutEnd(Fore.BLUE + "正在与数据库连接并读取路径...")
 
         # 热更新目录，源目录，
-        hotswap_source_path = mysql_select_hotswap_path(mysql_host, mysql_usr, mysql_pwd, mysql_database, mysql_table)
+        hotswap_source_path = mysql_select_hotswap_path(mysql_host, mysql_usr, mysql_pwd, mysql_database, mysql_table,
+                                                        mysql_config)
 
         if hotswap_source_path is None:
             hotswap_source_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "hotswap_dir")
